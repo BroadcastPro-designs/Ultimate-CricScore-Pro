@@ -1,0 +1,38 @@
+{
+  "name": "ultimate-cricscore-maker",
+  "productName": "Ultimate CricScore Maker",
+  "version": "1.0.0",
+  "description": "Professional Broadcast Cricket Scoreboard for OBS & vMix",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+ "build": {
+    "appId": "com.ultimatecricscore.app",
+    "productName": "Ultimate CricScore Maker",
+    "asar": true,
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ultimate CricScore",
+      "license": "eula.txt"
+    }
+  },
+  "author": "BroadcastPro",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "node-machine-id": "^1.1.12"
+  }
+}

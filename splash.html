@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Loading...</title>
+    <style>
+        body {
+            background-color: #050505;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            border: 2px solid #00d2ff; /* Cyan border */
+            border-radius: 15px;
+            box-sizing: border-box;
+        }
+        .brand {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 5px;
+        }
+        .brand span {
+            color: #00d2ff;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+        .loader {
+            width: 50px;
+            height: 5px;
+            background: #222;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        .loader::after {
+            content: '';
+            position: absolute;
+            left: -50px;
+            width: 50px;
+            height: 100%;
+            background: #00d2ff;
+            animation: loading 1.5s infinite ease-in-out;
+        }
+        @keyframes loading {
+            0% { left: -50px; }
+            100% { left: 100%; }
+        }
+        .loading-text {
+            margin-top: 15px;
+            font-size: 11px;
+            color: #00d2ff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="brand">BROADCAST<span>PRO</span></div>
+    <div class="subtitle">ULTIMATE CRICSCORE</div>
+    <div class="loader"></div>
+    <div class="loading-text">Initializing Engine...</div>
+</body>
+</html>

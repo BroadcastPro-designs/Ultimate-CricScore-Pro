@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ultimate CricScore Maker - Activation</title>
+    <style>
+        body { background-color: #0d1266; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { background: #1a237e; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 450px; border: 2px solid #ff9800; }
+        h2 { margin-top: 0; color: #ff9800; text-transform: uppercase; letter-spacing: 2px; }
+        .hwid-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px dashed #5c6bc0; }
+        .hwid-text { font-family: monospace; font-size: 18px; color: #00e676; letter-spacing: 1px; word-break: break-all; }
+        p { color:#bdc3c7; font-size:14px; line-height: 1.5; }
+        input { width: 100%; padding: 15px; margin: 15px 0; border: none; border-radius: 8px; font-size: 16px; text-align: center; box-sizing: border-box; font-weight: bold; text-transform: uppercase; }
+        button { background: #00e676; color: #0d1266; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: 900; border-radius: 8px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        button:hover { background: #00c853; color: white; }
+        #error-msg { color: #ff5252; margin-top: 15px; font-weight: bold; display: none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Software Activation</h2>
+        <p>Please email the Hardware ID below and your purchase receipt to <b>chamaracreation.cpj@gmail.com</b> to receive your unique Activation Key.</p>
+        
+        <div class="hwid-box">
+            <div style="font-size: 11px; color: #9fa8da; text-transform: uppercase; margin-bottom: 5px;">Your Hardware ID:</div>
+            <div class="hwid-text" id="display-hwid">Loading...</div>
+        </div>
+
+        <input type="text" id="license-key" placeholder="ENTER ACTIVATION KEY HERE">
+        <button onclick="verifyKey()">Unlock Software</button>
+        <div id="error-msg">Invalid Activation Key! Try again.</div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // Get the HWID from the main engine and display it
+        ipcRenderer.on('send-hwid', (event, hwid) => {
+            document.getElementById('display-hwid').innerText = hwid;
+        });
+
+        function verifyKey() {
+            // This removes any dashes the user might type so the math matches perfectly
+            const key = document.getElementById('license-key').value.replace(/-/g, '').trim().toUpperCase();
+            ipcRenderer.send('verify-license', key);
+        }
+
+        ipcRenderer.on('license-failed', () => {
+            const err = document.getElementById('error-msg');
+            err.style.display = 'block';
+            setTimeout(() => err.style.display = 'none', 3000);
+        });
+    </script>
+</body>
+</html>

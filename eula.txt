@@ -1,0 +1,27 @@
+END USER LICENSE AGREEMENT
+Software: Ultimate CricScore Maker
+
+Please read this agreement carefully before installing or using this software. By installing, you agree to be bound by the terms of this license.
+
+1. LICENSE GRANT
+This software is licensed, not sold. This purchase grants you the right to use Ultimate CricScore Maker on a single, designated computer. Your activation key is uniquely tied to your specific Hardware ID.
+
+2. RESTRICTIONS
+You may not:
+
+Share, distribute, rent, or resell your activation key or the software installer.
+
+Attempt to reverse-engineer, decompile, unpack, or bypass the offline activation system.
+
+Modify or extract the proprietary 3D animations, code, or graphics for use in other projects.
+
+3. OWNERSHIP
+All intellectual property rights, including the code, UI design, and animations within Ultimate CricScore Maker, remain the exclusive property of the developer.
+
+4. LIMITATION OF LIABILITY (IMPORTANT)
+Live broadcasting environments are inherently unpredictable. Ultimate CricScore Maker is provided "as is" without warranty of any kind. The developer shall not be held liable for any stream crashes, data loss, broadcast interruptions, or financial damages that occur while using this software. You are responsible for testing the software in your specific OBS/vMix environment prior to going live.
+
+5. TERMINATION
+If you violate any of these terms (such as sharing your key publicly), your license will be terminated immediately without a refund, and your activation key will be permanently blacklisted.
+
+By continuing with this installation, you acknowledge that you have read and agree to these terms.

@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate CricScore Maker</title>
+    <style>
+        /* --- DYNAMIC STYLING VARIABLES --- */
+        :root {
+            --font-main: 'Segoe UI', Roboto, sans-serif;
+            --cyan: #00d2ff;
+            
+            --bg-grad-1: #ffffff; --bg-grad-2: #f0f2f5;
+            --score-grad-1: #0d1266; --score-grad-2: #1a237e;
+            --indicator-color: #00e676; 
+            
+            --board-offset-y: 650px; 
+            --summary-pos-y: 300px; --fow-pos-y: 700px; 
+            --milestone-pos-y: 800px; --yettobat-pos-y: 300px;
+            --lthird-pos-y: 800px;
+            
+            --pos-x-left: 0px; --pos-y-left: 0px; 
+            --pos-x-mid: 0px; --pos-y-mid: 0px; 
+            --pos-x-right: 0px; --pos-y-right: 0px;
+            
+            --scale-x: 1; --scale-y: 1; 
+            
+            /* NEW WORKSPACE VARIABLES */
+            --ctrl-zoom: 1;
+            --right-col-width: 42%;
+            --preview-width: 100%;
+
+            --scale-fow: 0.9; --scale-bat: 0.9; --scale-bowl: 0.9; 
+            --scale-ytb: 0.9; --scale-mile: 1; --scale-lthird: 1;
+
+            --sz-team: 16px; --sz-total: 30px; --sz-batter-name: 16px; 
+            --sz-batter-runs: 18px; --sz-batter-balls: 12px; --sz-stats: 12px; 
+            --sz-info: 10px; --sz-bowler: 16px;
+
+            --c-team: #2c3e50; --c-total: #ffffff; --c-batter-name: #2c3e50; 
+            --c-batter-runs: #1a237e; --c-batter-balls: #7f8c8d; --c-stats: #2c3e50; 
+            --c-info: #2c3e50; --c-bowler: #2c3e50;
+
+            --tick-speed: 20s; --tick-opacity: 1; --tick-size: 24px; --tick-font: 'Segoe UI', sans-serif;
+            --tick-bg1: #1a237e; --tick-bg2: #0d1266; --tick-c1: #ffffff; --tick-c2: #ffffff;
+            --tick-x: 0px; --tick-y: 1020px; --tick-w: 1920px; --tick-h: 60px; --tick-rad: 0px;
+        }
+
+        /* --- DARK THEME BASE --- */
+        body {
+            font-family: var(--font-main); 
+            background-color: #050505; 
+            margin: 0; 
+            padding: 0;
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* TRUE TRANSPARENCY FOR OBS MODE */
+        body.obs-mode {
+            background-color: transparent !important;
+            overflow: hidden;
+        }
+        body.obs-mode #top-header, 
+        body.obs-mode #bottom-footer, 
+        body.obs-mode .right-column,
+        body.obs-mode .hide-in-obs {
+            display: none !important;
+        }
+        body.obs-mode #control-panels { padding: 0; margin: 0; height: 100vh; zoom: 1 !important; }
+        body.obs-mode .left-column { flex: none; width: 100vw; height: 100vh; padding: 0; overflow: hidden; }
+        body.obs-mode #preview-container-sticky { position: static; padding: 0; margin: 0; border: none; background: transparent; }
+        body.obs-mode #preview-box { border: none; border-radius: 0; width: 100vw; height: 100vh; background: transparent; aspect-ratio: auto; }
+        body.obs-mode #preview-inner { transform: none !important; }
+
+        /* --- HEADERS & FOOTERS --- */
+        #top-header {
+            height: 60px; background: #000; border-bottom: 1px solid #222;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; flex-shrink: 0; z-index: 1000;
+        }
+        .brand-title { color: #fff; font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+        .header-actions button { padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; border: none; margin-left: 10px; transition: 0.2s; }
+        .btn-contact { background: transparent; border: 1px solid #555; color: #fff; }
+        .btn-contact:hover { border-color: #fff; }
+        .btn-launch { background: var(--cyan); color: #000; }
+        .btn-launch:hover { background: #00b0d6; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0, 210, 255, 0.3); }
+
+        #bottom-footer {
+            height: 30px; background: #000; color: #555; font-size: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; letter-spacing: 1px; border-top: 1px solid #222; flex-shrink: 0;
+        }
+
+        /* --- MAIN TWO-COLUMN LAYOUT --- */
+        #control-panels {
+            display: flex; flex: 1; padding: 20px; gap: 20px;
+            box-sizing: border-box; overflow: hidden;
+            height: calc(100vh - 90px);
+        }
+        .left-column { 
+            flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; 
+            overflow-y: auto; padding-right: 10px; position: relative; 
+        }
+        .right-column { 
+            width: var(--right-col-width); flex: none; display: flex; flex-direction: column; gap: 20px; 
+            overflow-y: auto; padding-right: 10px; zoom: var(--ctrl-zoom);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* --- STICKY PREVIEW BOX --- */
+        #preview-container-sticky {
+            position: sticky; top: 0; z-index: 100;
+            background: #050505; 
+            padding-top: 5px; padding-bottom: 15px; margin-top: -5px;
+            border-bottom: 1px solid #222;
+        }
+        #preview-box {
+            position: relative; width: var(--preview-width); aspect-ratio: 16/9; margin: 0 auto;
+            background-color: #111;
+            background-image: repeating-linear-gradient(45deg, #0a0a0a 25%, transparent 25%, transparent 75%, #0a0a0a 75%, #0a0a0a), repeating-linear-gradient(45deg, #0a0a0a 25%, #141414 25%, #141414 75%, #0a0a0a 75%, #0a0a0a);
+            background-position: 0 0, 10px 10px; background-size: 20px 20px;
+            border: 1px solid #333; border-radius: 8px; overflow: hidden;
+        }
+        #preview-inner {
+            position: absolute; top: 0; left: 0;
+            width: 1920px; height: 1080px; transform-origin: top left;
+        }
+
+        /* --- PANELS & DARK UI ELEMENTS --- */
+        .panel { background: #111; padding: 20px; border-radius: 10px; border: 1px solid #222; width: 100%; box-sizing: border-box; color: #ddd; }
+        h3 { color: var(--cyan); font-size: 13px; text-transform: uppercase; font-weight: 800; border-bottom: 1px solid #222; padding-bottom: 10px; margin-top: 0; margin-bottom: 15px; }
+        .cyan-heading { color: var(--cyan); font-size: 12px; }
+        label { display: block; font-size: 11px; font-weight: bold; margin-top: 10px; color: var(--cyan); text-transform: uppercase; }
+        
+        /* FIX BUG 1: Force active positioning on inputs to bypass Chromium Zoom hit-testing bugs */
+        input, select, textarea, button { position: relative; z-index: 50; }
+        
+        input[type="text"], input[type="number"], select { width: 100%; padding: 10px; margin-top: 4px; border: 1px solid #333; border-radius: 6px; box-sizing: border-box; background: #000; color: #fff; }
+        input[type="color"] { width: 30px; height: 30px; padding: 0; border: none; cursor: pointer; background: transparent; }
+        input[type="range"] { width: 100%; }
+        hr { border-top: 1px solid #222; margin: 15px 0; }
+        
+        .btn { padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 12px; text-transform: uppercase;}
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-run { background: #1a1a1a; border: 1px solid #333; color: #fff; } 
+        .btn-run:not(:disabled):hover { background: var(--cyan); color: #000; border-color: var(--cyan); }
+        .btn-wicket { background: #ff3333; color: white;}
+        .btn-action { background: #222; color: white; width: 100%; margin-top: 10px; border: 1px solid #444; }
+        .btn-action:hover { background: #333; }
+
+        .run-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+        .style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .style-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #aaa; }
+        .switch-row { display: flex; gap: 10px; margin-top: 10px; font-size: 12px; font-weight: bold; align-items: center; flex-wrap: wrap; color: #aaa;}
+        
+        .cheat-sheet-banner { background: #001122; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; width: 100%; border: 1px solid var(--cyan); box-sizing: border-box; }
+        .cheat-sheet-text { font-size: 11px; line-height: 1.8; font-weight: bold; font-family: monospace; margin: 5px 0;}
+        .cheat-key { background: #0d1266; padding: 3px 6px; border-radius: 4px; color: #00e676; margin: 0 3px; font-size: 13px;}
+        .shortcut-group { max-height: 180px; overflow-y: auto; border: 1px solid #222; padding: 10px; border-radius: 8px; background: #000;}
+        .shortcut-row { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; color: #aaa; font-size: 12px; font-weight: bold;}
+        .short-key { text-align: center; text-transform: uppercase; font-weight: bold; width: 50px !important; margin-top: 0 !important; cursor: pointer; background: #111; color: #00e676;}
+        .short-key:focus { border-color: var(--cyan); outline: none; background: #222;}
+
+        /* --- SCOREBOARD & ANIMATIONS --- */
+        #scoreboard-wrapper { position: absolute; top: var(--board-offset-y); left: 50%; transform: translateX(-50%) translateY(0) scale(1); transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 0.5s ease; opacity: 1; z-index: 10; display: flex; flex-direction: column; align-items: center; }
+        #scoreboard-wrapper.hidden { opacity: 0 !important; transform: translateX(-50%) translateY(50px) scale(0.9) !important; pointer-events: none; }
+        .scoreboard-scaler { position: relative; transform: scaleX(var(--scale-x)) scaleY(var(--scale-y)); transform-origin: top center; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .special-anim-layer { position: absolute; bottom: 100%; left: 0; width: 100%; height: 200px; pointer-events: none; z-index: 105; }
+        
+        .anim-four-wrapper { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; display: none; }
+        .anim-four-wrapper.active { display: block; }
+        .four-ball { position: absolute; bottom: -10px; left: -50px; width: 40px; height: 40px; animation: fourBallRoll 3s ease-in-out forwards; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));}
+        .four-text { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%) scale(0); font-size: 100px; font-weight: 900; color: #fff; font-style: italic; -webkit-text-stroke: 4px #2e7d32; text-shadow: 0 10px 25px rgba(0,0,0,0.6); opacity: 0; background: linear-gradient(180deg, #ffd54f, #ff9800); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+        .four-text.active { animation: popTextBig 4s 0.6s forwards; }
+        @keyframes fourBallRoll { 0% { left: -50px; transform: rotate(0deg); opacity: 1; } 40% { left: 40%; transform: rotate(400deg); opacity: 1; } 70% { left: 60%; transform: rotate(600deg); opacity: 1; } 100% { left: 120%; transform: rotate(1200deg); opacity: 0; } }
+
+        .anim-six-wrapper { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; display: none; }
+        .anim-six-wrapper.active { display: block; }
+        .six-ball { position: absolute; bottom: 0px; left: 20%; width: 50px; height: 50px; animation: sixBallFly 3.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; filter: drop-shadow(0 8px 10px rgba(0,0,0,0.6));}
+        .six-text { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%) scale(0); font-size: 130px; font-weight: 900; color: #fff; font-style: italic; -webkit-text-stroke: 5px #0d47a1; text-shadow: 0 15px 30px rgba(0,0,0,0.6); opacity: 0; background: linear-gradient(180deg, #81d4fa, #1976d2); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+        .six-text.active { animation: popTextBig 4.5s 0.8s forwards; }
+        @keyframes sixBallFly { 0% { left: -20px; bottom: 0px; transform: scale(1) rotate(0deg); opacity: 1;} 40% { left: 50%; bottom: 350px; transform: scale(1.5) rotate(360deg); opacity: 1;} 80% { left: 100%; bottom: 50px; transform: scale(0.7) rotate(600deg); opacity: 1;} 100% { left: 120%; bottom: -50px; transform: scale(0.5) rotate(720deg); opacity: 0;} }
+
+        .anim-out-wrapper { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 300px; height: 200px; display: none; z-index: 105;}
+        .anim-out-wrapper.active { display: block; }
+        .out-ball { position: absolute; bottom: 40px; left: -100px; width: 25px; height: 25px; background: #d32f2f; border-radius: 50%; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.5); }
+        .out-ball.active { animation: outBowlInRicochet 2.5s ease-out forwards; }
+        .stump { position: absolute; bottom: -5px; width: 12px; height: 110px; background: linear-gradient(90deg, #d4a373, #b8860b); border-radius: 6px; transform-origin: bottom center;}
+        .stump.s1 { left: 130px; } .stump.s2 { left: 144px; } .stump.s3 { left: 158px; }
+        .bail { position: absolute; bottom: 103px; width: 16px; height: 6px; background: #d4a373; border-radius: 3px; }
+        .bail.b1 { left: 132px; } .bail.b2 { left: 148px; }
+        .stump.s2.active { animation: stumpFly 2s 0.6s ease-out forwards; }
+        .bail.b1.active { animation: bailFlyLeft 2s 0.6s ease-out forwards; }
+        .bail.b2.active { animation: bailFlyRight 2s 0.6s ease-out forwards; }
+        .out-text { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%) scale(0); font-size: 110px; font-weight: 900; color: #d32f2f; font-style: italic; -webkit-text-stroke: 4px #fff; text-shadow: 0 10px 25px rgba(0,0,0,0.8); opacity: 0; }
+        .out-text.active { animation: popTextBig 4s 0.8s forwards; }
+
+        @keyframes outBowlInRicochet { 0% { left: -100px; bottom: 60px; opacity: 1; transform: scale(1); } 25% { left: 144px; bottom: 20px; opacity: 1; transform: scale(1); } 35% { left: 180px; bottom: 60px; opacity: 1; transform: scale(0.8); } 100% { left: 350px; bottom: -50px; opacity: 0; transform: scale(0.5); } }
+        @keyframes stumpFly { 100% { transform: rotate(50deg) translate(30px, -20px); opacity: 0; } }
+        @keyframes bailFlyLeft { 100% { transform: rotate(-80deg) translate(-40px, -80px); opacity: 0; } }
+        @keyframes bailFlyRight { 100% { transform: rotate(80deg) translate(40px, -80px); opacity: 0; } }
+
+        @keyframes popTextBig { 0% { transform: translateX(-50%) scale(0); opacity: 0; } 10% { transform: translateX(-50%) scale(1.1); opacity: 1; } 20% { transform: translateX(-50%) scale(1); opacity: 1; } 85% { transform: translateX(-50%) scale(1); opacity: 1; } 100% { transform: translateX(-50%) scale(1.5); opacity: 0; } }
+        .pop-animate { animation: popValue 0.3s ease-out; display: inline-block; }
+        @keyframes popValue { 0% { transform: scale(1); } 50% { transform: scale(1.4); color: #ff9800; } 100% { transform: scale(1); } }
+
+        .scoreboard-container { background: linear-gradient(135deg, var(--bg-grad-1), var(--bg-grad-2)); width: max-content; min-width: 1150px; height: 85px; border-radius: 45px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 5px 30px; position: relative; border: 1px solid #d1d9e6; overflow: hidden; z-index: 10; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .event-popup { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; z-index: 100; }
+        .event-popup.bg-out { background: linear-gradient(90deg, #d32f2f, #f44336); }
+        .event-popup.bg-four { background: linear-gradient(90deg, #388e3c, #4caf50); }
+        .event-popup.bg-six { background: linear-gradient(90deg, #1976d2, #2196f3); }
+        .event-popup.bg-freehit { background: linear-gradient(90deg, #ff9800, #e91e63); }
+        .event-popup.bg-hattrick { background: linear-gradient(90deg, #9c27b0, #673ab7); } 
+        .event-popup.show { visibility: visible; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .event-popup.hide { visibility: visible; animation: popOut 0.3s forwards; }
+        .event-text { color: white; font-size: 55px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: 5px; text-shadow: 3px 3px 0px rgba(0,0,0,0.2); }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5) translateY(30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes popOut { 0% { opacity: 1; transform: scale(1) translateY(0); } 100% { opacity: 0; transform: scale(1.5) translateY(-30px); } }
+
+        .ticker-container { position: absolute; top: var(--tick-y); left: var(--tick-x); width: var(--tick-w); height: var(--tick-h); border-radius: var(--tick-rad); z-index: 100; display: flex; align-items: center; overflow: hidden; transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); background: linear-gradient(90deg, var(--tick-bg1), var(--tick-bg2)); opacity: var(--tick-opacity); transform: translateY(0); }
+        .ticker-container.hidden { opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .ticker-scroll { white-space: nowrap; animation: tickerAnim var(--tick-speed) linear infinite; display: inline-block; padding-left: 100%; height: 100%; display: flex; align-items: center; }
+        @keyframes tickerAnim { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        .ticker-text { font-family: var(--tick-font); font-size: var(--tick-size); background: linear-gradient(90deg, var(--tick-c1), var(--tick-c2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; text-transform: uppercase; display: inline-block; padding: 0 20px;}
+
+        .broadcast-overlay { position: absolute; left: 50%; background: linear-gradient(135deg, var(--score-grad-1), var(--score-grad-2)); color: white; border-radius: 20px; padding: 25px 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); opacity: 0; visibility: hidden; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, visibility 0s 0.6s; width: 900px; z-index: 50; border: 2px solid #ff9800; text-align: center; }
+        #overlay-fow { top: var(--fow-pos-y); transform: translate(-50%, 2000px) scale(var(--scale-fow)); }
+        #overlay-fow.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(var(--scale-fow)); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, visibility 0s 0s;}
+        #overlay-batting { top: var(--summary-pos-y); transform: translate(-50%, 2000px) scale(var(--scale-bat)); }
+        #overlay-batting.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(var(--scale-bat)); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, visibility 0s 0s;}
+        #overlay-bowling { top: var(--summary-pos-y); transform: translate(-50%, 2000px) scale(var(--scale-bowl)); }
+        #overlay-bowling.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(var(--scale-bowl)); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, visibility 0s 0s;}
+        #overlay-yettobat { top: var(--yettobat-pos-y); transform: translate(-50%, 2000px) scale(var(--scale-ytb)); }
+        #overlay-yettobat.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(var(--scale-ytb)); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, visibility 0s 0s;}
+        #overlay-milestone { top: var(--milestone-pos-y); width: 600px; border-radius: 50px; padding: 15px 30px; border-color: #00e676; transform: translate(-50%, 2000px) scale(var(--scale-mile)); }
+        #overlay-milestone.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(var(--scale-mile)); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, visibility 0s 0s;}
+        #overlay-lthird { top: var(--lthird-pos-y); width: 600px; border-radius: 20px; padding: 15px 30px; border: 4px solid var(--score-grad-1); background: #ffffff; color: var(--score-grad-2); transform: translate(-50%, 2000px) scale(var(--scale-lthird)); }
+        #overlay-lthird.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(var(--scale-lthird)); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, visibility 0s 0s;}
+
+        .broadcast-overlay h2 { margin: 0 0 15px 0; color: #ff9800; text-transform: uppercase; letter-spacing: 2px; }
+        #fow-name { font-size: 45px; font-weight: 900; margin: 10px 0; text-transform: uppercase; }
+        .fow-stats { font-size: 30px; font-weight: bold; color: #f0f2f5; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 16px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        th { color: #ff9800; font-weight: 900; text-transform: uppercase; } td.bold { font-weight: bold; }
+        .team-logo-wrapper { width: 55px; height: 55px; margin: 0 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; z-index: 5; }
+        .team-logo-wrapper img { max-width: 100%; max-height: 100%; object-fit: contain; display: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+        .left-section { flex: 1.2; border-right: 1px solid #ddd; position: relative; padding-left: 15px; display: flex; flex-direction: column; justify-content: center; height: 100%; transform: translate(var(--pos-x-left), var(--pos-y-left)); z-index: 2; transition: all 0.4s ease; }
+        .middle-section { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; position: relative; transform: translate(var(--pos-x-mid), var(--pos-y-mid)); z-index: 2; transition: all 0.4s ease; }
+        .right-section { flex: 1.3; position: relative; display: flex; flex-direction: row; align-items: center; justify-content: space-between; border-left: 1px solid #ddd; padding: 0 15px; height: 100%; transform: translate(var(--pos-x-right), var(--pos-y-right)); overflow: hidden; z-index: 2; transition: all 0.4s ease; }
+        
+        /* FIX BUG 5: Animated Custom SVG Bat Indicator */
+        .active-batter-indicator { 
+            position: absolute; left: -10px; width: 20px; height: 20px; 
+            display: flex; align-items: center; justify-content: center;
+            background: transparent; box-shadow: none; border-radius: 0;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); 
+        }
+        .bat-icon { width: 18px; height: 18px; }
+        .bat-spin .bat-icon { animation: batSpinAnim 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes batSpinAnim {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.4); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .player-row { display: flex; align-items: center; height: 26px; transition: opacity 0.4s ease; }
+        .player-row.fade-out { opacity: 0; } .player-row.fade-in { animation: fadeIn 0.5s forwards; }
+        
+        .player-name { font-size: var(--sz-batter-name); color: var(--c-batter-name); font-family: var(--font-main); font-weight: 700; width: auto; min-width: 150px; text-transform: uppercase; white-space: nowrap; overflow: visible; margin-left: 10px; margin-right: 10px;}
+        .player-score { font-size: var(--sz-batter-runs); color: var(--c-batter-runs); font-weight: 800; display: inline-block; }
+        .balls-faced { font-size: var(--sz-batter-balls); color: var(--c-batter-balls); font-weight: 400; margin-left: 5px; }
+
+        .team-names-wrapper { display: flex; align-items: baseline; justify-content: center; margin-bottom: 2px; }
+        .team-display { font-size: calc(var(--sz-team) * 0.75); color: var(--c-team); font-weight: 700; text-transform: uppercase; transition: 0.3s; }
+        .team-display.active-batting { font-size: var(--sz-team); font-weight: 900; }
+        .vs-text { font-size: 11px; font-weight: bold; color: #bdc3c7; margin: 0 8px; }
+        .blue-score-box { background: linear-gradient(135deg, var(--score-grad-1), var(--score-grad-2)); color: var(--text-score); width: 170px; padding: 4px 0; border-radius: 10px; text-align: center; }
+        .total-score { font-size: var(--sz-total); color: var(--c-total); font-family: var(--font-main); font-weight: 900; line-height: 1; display: inline-block; margin-top: 2px; margin-bottom: 2px; }
+        
+        .stats-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 6px; font-weight: 800; }
+        .overs-pill { font-size: var(--sz-stats); color: var(--c-stats); background: rgba(0,0,0,0.06); padding: 3px 10px; border-radius: 8px; }
+        .toggle-stat { font-size: var(--sz-stats); color: var(--c-stats); background: rgba(0,0,0,0.06); border-radius: 8px; opacity: 0; max-width: 0; transform: scale(0.5); padding: 0; margin: 0; overflow: hidden; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); white-space: nowrap; }
+        .toggle-stat.target-item { background: var(--score-grad-1); color: white; }
+        .toggle-stat.show { opacity: 1; max-width: 120px; transform: scale(1); padding: 3px 10px; }
+
+        .info-container { position: relative; left: 0; top: 0; transform: none; display: flex; flex-direction: column; justify-content: center; z-index: 5; flex: 1; padding-right: 15px; min-width: 0; }
+        .equation-box { font-size: var(--sz-info); color: var(--c-info); font-weight: 800; max-width: 100%; text-transform: uppercase; line-height: 1.2; opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, margin 0.4s ease; text-align: left; transform: translateX(-20px); margin-top: 0; white-space: normal; word-wrap: break-word;}
+        .equation-box.show { opacity: 1; max-height: 50px; transform: translateX(0); margin-top: 4px; }
+        .equation-box.show:first-child { margin-top: 0; }
+        
+        .bowler-info-wrapper { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; max-width: 170px; }
+        .bowler-name { font-size: var(--sz-bowler); color: var(--c-bowler); font-weight: 800; margin-bottom: 2px; text-transform: uppercase; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; min-height: 19px; }
+        
+        @keyframes bowlerPop { 0% { transform: scale(0.8) translateY(10px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+        .bowler-anim { animation: bowlerPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); display: block; }
+
+        .match-result-cover { position: absolute; top: 0; left: 100%; width: 100%; height: 100%; background: linear-gradient(135deg, var(--score-grad-1), var(--score-grad-2)); display: flex; align-items: center; justify-content: center; z-index: 20; transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); color: white; font-weight: 900; font-size: 14px; text-transform: uppercase; text-align: center; padding: 0 15px; box-sizing: border-box; }
+        .match-result-cover.show { left: 0; }
+
+        .this-over-balls { display: flex; gap: 4px; height: 22px; }
+        @keyframes popInBall { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+        .ball-circle { width: 22px; height: 22px; background: #f0f3f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #34495e; border: 1px solid #d1d9e6; }
+
+        .sponsor-box { height: 60px; margin-left: 15px; display: none; align-items: center; justify-content: center; border-left: 1px solid #ddd; padding-left: 15px;}
+        .sponsor-box img { max-height: 100%; max-width: 120px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+
+        #watermark {
+    position: fixed;
+    top: 18%;           /* Move to the middle */
+    left: 50%;          /* Move to the middle */
+    transform: translate(-50%, -50%) ; /* Center it and tilt it */
+    
+    
+    font-size: 50px;
+    font-family: 'Arial Black', sans-serif;
+    color: rgba(0, 0, 0, 0.20); /* Very faint (15% opacity) */
+    
+    white-space: nowrap;
+    pointer-events: none; /* People can click "through" it to use the buttons */
+    z-index: 9999;        /* Always stays on top of everything else */
+    user-select: none;    /* Can't be highlighted or copied */
+}
+    </style>
+</head>
+<body>
+
+    <div id="top-header">
+        <div class="brand-title"><b>BROADCAST<span style="color:var(--cyan);">PRO</span></b> <span style="color:#444; margin:0 10px;">|</span> <span style="color:#aaa; font-weight:normal; font-size:14px;">ULTIMATE CRICSCORE</span></div>
+        <div class="header-actions">
+            <button class="btn-contact" onclick="window.open('https://www.facebook.com/share/18TRyPsFwU/')">Contact Us</button>
+            <button class="btn-launch" onclick="launchOBSWindow()">Launch Live Output</button>
+        </div>
+    </div>
+
+    <div id="control-panels">
+        
+        <div class="left-column hide-in-obs">
+            
+            <div id="preview-container-sticky">
+                <h3 class="cyan-heading" style="margin-top:0;">TEMPLATE PREVIEW</h3>
+                <div id="preview-box">
+                    <div id="preview-inner">
+                        
+                        <div id="ticker-container" class="ticker-container hidden">
+                            <div class="ticker-scroll"><span id="ticker-text" class="ticker-text"></span></div>
+                        </div>
+
+                        <div id="overlay-fow" class="broadcast-overlay"><h2>Fall of Wicket</h2><h1 id="fow-name">Player Name</h1><div class="fow-stats"><span id="fow-runs">0</span> Runs (<span id="fow-balls">0</span> Balls) | SR: <span id="fow-sr">0.0</span></div></div>
+                        <div id="overlay-batting" class="broadcast-overlay"><h2>Batting Summary</h2><table><thead><tr><th>Batter</th><th>Role</th><th>Status</th><th>R</th><th>B</th><th>SR</th></tr></thead><tbody id="batting-tbody"></tbody></table></div>
+                        <div id="overlay-bowling" class="broadcast-overlay"><h2>Bowling Summary</h2><table><thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th></tr></thead><tbody id="bowling-tbody"></tbody></table></div>
+                        <div id="overlay-yettobat" class="broadcast-overlay"><h2>Yet To Bat</h2><table><thead><tr><th>Player</th><th>Role</th></tr></thead><tbody id="yettobat-tbody"></tbody></table></div>
+                        <div id="overlay-milestone" class="broadcast-overlay" style="border: 4px solid #00e676; background: #1a237e;"><h2 id="milestone-title" style="color: #00e676; font-size: 20px;">MILESTONE</h2><h1 id="milestone-name" style="margin: 5px 0;">PLAYER NAME</h1><div id="milestone-stats" class="fow-stats" style="color: white;">50 Runs (32 Balls)</div></div>
+                        <div id="overlay-lthird" class="broadcast-overlay" style="border: 4px solid var(--score-grad-1); background: #ffffff; color: var(--score-grad-2);"><h2 id="lthird-title" style="color: var(--score-grad-1); font-size: 16px; margin:0;">NEW BATTER</h2><h1 id="lthird-name" style="margin: 5px 0; font-size:35px; color: var(--score-grad-2);">PLAYER NAME</h1><div id="lthird-role" class="fow-stats" style="color: #ff9800; font-size: 20px;">Role</div></div>
+
+                        <div id="scoreboard-wrapper">
+                            <div class="scoreboard-scaler">
+                                <div class="special-anim-layer">
+                                    <div id="anim-four" class="anim-four-wrapper"><div id="four-text" class="four-text">FOUR!</div><div class="four-ball"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#d32f2f" /><path d="M 50 2 Q 75 50 50 98" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="5,5"/><path d="M 50 2 Q 25 50 50 98" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="5,5"/></svg></div></div>
+                                    <div id="anim-six" class="anim-six-wrapper"><div id="six-text" class="six-text">SIX!</div><div class="six-ball"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#d32f2f" /><path d="M 50 2 Q 75 50 50 98" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="5,5"/><path d="M 50 2 Q 25 50 50 98" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="5,5"/></svg></div></div>
+                                    <div id="anim-out" class="anim-out-wrapper">
+                                        <div id="out-text" class="out-text">OUT!</div>
+                                        <svg viewBox="0 0 300 200" width="100%" height="100%">
+                                            <g id="stumps" stroke="#8d6e63" stroke-width="1"><rect class="stump s1" x="130" y="90" width="8" height="110"/><rect class="stump s2" id="out-s2" x="146" y="90" width="8" height="110"/><rect class="stump s3" x="162" y="90" width="8" height="110"/><rect class="bail b1" id="out-b1" x="132" y="86" width="18" height="4"/><rect class="bail b2" id="out-b2" x="150" y="86" width="18" height="4"/></g>
+                                            <circle id="out-ball" class="out-ball" cx="-100" cy="140" r="10" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="scoreboard-container">
+                                    <div id="event-popup" class="event-popup"><div id="event-text" class="event-text">OUT!</div></div>
+                                    <div class="team-logo-wrapper"><img id="logo-left" src=""></div>
+                                    <div class="left-section">
+                                        <div id="active-batter-indicator" class="active-batter-indicator">
+                                            <svg class="bat-icon" viewBox="0 0 24 24" style="fill: var(--indicator-color); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform-origin: center;">
+                                                <path d="M16.5 3.5c-.7-.7-1.8-.7-2.5 0l-8.5 8.5c-.7.7-.7 1.8 0 2.5l2 2c.7.7 1.8.7 2.5 0l8.5-8.5c.7-.7.7-1.8 0-2.5l-2-2zM5.5 15.5L2.8 18.2c-.4.4-.4 1 0 1.4l1.4 1.4c.4.4 1 .4 1.4 0l2.7-2.7-2.8-2.8z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="player-row" id="row-0"><span class="player-name" id="disp-p0-name">Batter 1</span><span class="player-score pop-animate" id="p0-runs">0</span><span class="balls-faced">(<span id="p0-balls">0</span>)</span></div>
+                                        <div class="player-row" id="row-1"><span class="player-name" id="disp-p1-name">Batter 2</span><span class="player-score pop-animate" id="p1-runs">0</span><span class="balls-faced">(<span id="p1-balls">0</span>)</span></div>
+                                    </div>
+                                    
+                                    <div class="middle-section">
+                                        <div class="team-names-wrapper"><span id="disp-t1" class="team-display active-batting">TEAM A</span><span class="vs-text">vs</span><span id="disp-t2" class="team-display">TEAM B</span></div>
+                                        <div class="blue-score-box" id="blue-score-box"><div class="total-score"><span id="total-runs" class="pop-animate">0</span> / <span id="total-wickets" class="pop-animate">0</span></div></div>
+                                        <div class="stats-row">
+                                            <div class="overs-pill">OVERS: <span id="total-overs">0.0</span></div>
+                                            <div class="toggle-stat target-item" id="disp-tgt">TARGET: <span id="val-tgt">0</span></div>
+                                            <div class="toggle-stat" id="disp-crr">CRR: <span id="val-crr">0.00</span></div>
+                                            <div class="toggle-stat" id="disp-rrr">RRR: <span id="val-rrr">0.00</span></div>
+                                        </div>
+                                    </div>
+                                    <h1 id="watermark">DEMO MODE | PURCHASE FULL VERSION</h1>
+                                    <div class="right-section">
+                                        <div id="match-result-display" class="match-result-cover"><span id="match-result-text"></span></div>
+                                        <div class="info-container">
+                                            <div id="disp-title" class="equation-box" style="color:#00bcd4;"></div>
+                                            <div id="disp-toss" class="equation-box"></div>
+                                            <div id="disp-equation" class="equation-box"></div>
+                                            <div id="disp-partnership" class="equation-box" style="color:#1976d2;">PARTNERSHIP: 0 (0)</div>
+                                            <div id="disp-lastfow" class="equation-box" style="color:#d32f2f;">LAST FOW: -</div>
+                                        </div>
+                                        <div class="bowler-info-wrapper">
+                                            <div class="bowler-name" id="disp-bowler"></div>
+                                            <div class="this-over-balls" id="this-over-container" data-over=""></div>
+                                        </div>
+                                    </div>
+                                    <div class="team-logo-wrapper"><img id="logo-right" src=""></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+                                    
+            <div class="panel">
+                <h3 class="cyan-heading">SHORTCUTS PREVIEW AND LIVE SCORING</h3>
+                <div class="cheat-sheet-banner" id="cheat-sheet-banner">
+                    <div class="cheat-sheet-text" id="cheat-scoring"></div>
+                    <div class="cheat-sheet-text" style="color:#00e676; margin-top:10px;" id="cheat-overlays"></div>
+                    <div class="cheat-sheet-text" style="color:var(--cyan); margin-top:10px;" id="cheat-toggles"></div>
+                </div>
+
+                <label>Current Bowler</label>
+                <select id="bowler-select" onchange="updateBowler()"><option value="">-- Select New Bowler --</option></select>
+                <div class="run-grid" id="scoring-controls">
+                    <button class="btn btn-run" onclick="handleBall(0)" disabled>0</button>
+                    <button class="btn btn-run" onclick="handleBall(1)" disabled>1</button>
+                    <button class="btn btn-run" onclick="handleBall(2)" disabled>2</button>
+                    <button class="btn btn-run" onclick="handleBall(3)" disabled>3</button>
+                    <button class="btn btn-run" style="background:#e8f5e9" onclick="handleBall(4)" disabled>4 (FOUR)</button>
+                    <button class="btn btn-run" style="background:#e3f2fd" onclick="handleBall(6)" disabled>6 (SIX)</button>
+                    <button class="btn btn-run" onclick="handleExtra('Wd')" disabled>Wide (+1)</button>
+                    <button class="btn btn-run" onclick="handleExtra('Nb')" disabled>No Ball (+1)</button>
+                    <button class="btn btn-run" style="background:#fff3e0" onclick="handleExtra('B')" disabled>Byes (+1)</button>
+                    <button class="btn btn-run" style="background:#fff3e0" onclick="handleExtra('Lb')" disabled>Leg Byes (+1)</button>
+                    
+                    <div style="grid-column: span 2; display:flex; gap:5px; flex-direction:column;">
+                        <input type="text" id="wicket-assist" placeholder="Caught/Run out details">
+                        <button class="btn btn-wicket" onclick="handleWicket()" disabled style="width:100%;">WICKET / OUT</button>
+                    </div>
+                    <button class="btn btn-undo" style="grid-column: span 2;" onclick="undoBall()" disabled>UNDO ACTION</button>
+                </div>
+                <hr>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <button class="btn btn-action" style="background:#4caf50; border-color:#4caf50; margin:0;" onclick="triggerAnim('FOUR'); triggerSpecialAnim('FOUR');">☄️ BIG FOUR</button>
+                    <button class="btn btn-action" style="background:#2196f3; border-color:#2196f3; margin:0;" onclick="triggerAnim('SIX'); triggerSpecialAnim('SIX');">🚀 BIG SIX</button>
+                    <button class="btn btn-action" style="background:#d32f2f; border-color:#d32f2f; margin:0;" onclick="triggerAnim('OUT'); triggerSpecialAnim('OUT');">🎯 STUMPS (OUT)</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top:5px;">
+                    <button class="btn btn-action" style="background:#ff9800; border-color:#ff9800; margin:0;" onclick="triggerAnim('FREE HIT')">Free Hit Popup</button>
+                    <button class="btn btn-action" style="background:#9c27b0; border-color:#9c27b0; margin:0;" onclick="triggerAnim('HAT TRICK')">Hat Trick Popup</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">CUSTOM KEYBOARD SHORTCUTS</h3>
+                <p style="font-size: 11px; color: #7f8c8d; margin-top: 0;">Click a box & press a key to assign. Press 'Backspace' to clear.</p>
+                <div class="shortcut-group">
+                    <label style="margin-top: 0;">Scoring Actions</label>
+                    <div class="shortcut-row"><span>0 Runs</span><input type="text" id="key-run0" class="short-key"></div>
+                    <div class="shortcut-row"><span>1 Run</span><input type="text" id="key-run1" class="short-key"></div>
+                    <div class="shortcut-row"><span>2 Runs</span><input type="text" id="key-run2" class="short-key"></div>
+                    <div class="shortcut-row"><span>3 Runs</span><input type="text" id="key-run3" class="short-key"></div>
+                    <div class="shortcut-row"><span>4 Runs</span><input type="text" id="key-run4" class="short-key"></div>
+                    <div class="shortcut-row"><span>6 Runs</span><input type="text" id="key-run6" class="short-key"></div>
+                    <div class="shortcut-row"><span>Wide</span><input type="text" id="key-wd" class="short-key"></div>
+                    <div class="shortcut-row"><span>No Ball</span><input type="text" id="key-nb" class="short-key"></div>
+                    <div class="shortcut-row"><span>Byes</span><input type="text" id="key-b" class="short-key"></div>
+                    <div class="shortcut-row"><span>Leg Byes</span><input type="text" id="key-lb" class="short-key"></div>
+                    <div class="shortcut-row"><span style="color:#ff3333; font-weight:bold;">WICKET</span><input type="text" id="key-out" class="short-key"></div>
+                    <div class="shortcut-row"><span>Undo Action</span><input type="text" id="key-undo" class="short-key"></div>
+                    
+                    <label style="margin-top: 15px;">Special Animations</label>
+                    <div class="shortcut-row"><span>Big Four</span><input type="text" id="key-animFour" class="short-key"></div>
+                    <div class="shortcut-row"><span>Big Six</span><input type="text" id="key-animSix" class="short-key"></div>
+                    <div class="shortcut-row"><span>Stumps (Out)</span><input type="text" id="key-animOut" class="short-key"></div>
+                    <div class="shortcut-row"><span>Free Hit</span><input type="text" id="key-trigFreeHit" class="short-key"></div>
+                    <div class="shortcut-row"><span>Hat Trick</span><input type="text" id="key-trigHatTrick" class="short-key"></div>
+
+                    <label style="margin-top: 15px;">Overlays & Graphics</label>
+                    <div class="shortcut-row"><span>Toggle Main</span><input type="text" id="key-togMain" class="short-key"></div>
+                    <div class="shortcut-row"><span>Show FOW</span><input type="text" id="key-togFow" class="short-key"></div>
+                    <div class="shortcut-row"><span>Show Batting</span><input type="text" id="key-togBat" class="short-key"></div>
+                    <div class="shortcut-row"><span>Show Bowling</span><input type="text" id="key-togBowl" class="short-key"></div>
+                    <div class="shortcut-row"><span>Show Yet To Bat</span><input type="text" id="key-togYtb" class="short-key"></div>
+                    <div class="shortcut-row"><span style="color:#ff3333; font-weight:bold;">Hide All Overlays</span><input type="text" id="key-hideAll" class="short-key"></div>
+                    
+                    <label style="margin-top: 15px;">Player Graphics</label>
+                    <div class="shortcut-row"><span>Show Milestone</span><input type="text" id="key-showMile" class="short-key"></div>
+                    <div class="shortcut-row"><span>Show New Batter</span><input type="text" id="key-ltBatter" class="short-key"></div>
+                    <div class="shortcut-row"><span>Show New Bowler</span><input type="text" id="key-ltBowler" class="short-key"></div>
+                    <div class="shortcut-row"><span>Hide Player Graphic</span><input type="text" id="key-hideLt" class="short-key"></div>
+
+                    <label style="margin-top: 15px;">Stat Toggles</label>
+                    <div class="shortcut-row"><span>Toggle Title</span><input type="text" id="key-togTitle" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle Ticker</span><input type="text" id="key-togTicker" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle Target</span><input type="text" id="key-togTgt" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle CRR</span><input type="text" id="key-togCrr" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle RRR</span><input type="text" id="key-togRrr" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle Win Eq.</span><input type="text" id="key-togEq" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle Toss</span><input type="text" id="key-togToss" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle Part.</span><input type="text" id="key-togPart" class="short-key"></div>
+                    <div class="shortcut-row"><span>Toggle L.FOW</span><input type="text" id="key-togFowGraphic" class="short-key"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="right-column hide-in-obs">
+            
+            <div class="panel">
+                <h3 class="cyan-heading">BROADCAST OVERLAYS & RESULT</h3>
+                <button class="btn btn-action" style="background:#e91e63; border-color:#e91e63;" onclick="toggleOverlay('main')">Toggle Main Scoreboard</button>
+                <hr>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <button class="btn btn-action" style="background:#ff9800; border-color:#ff9800; margin:0;" onclick="toggleOverlay('fow')">Show Last FOW Big</button>
+                    <button class="btn btn-action" style="background:#1976d2; border-color:#1976d2; margin:0;" onclick="toggleOverlay('batting')">Batting Summary</button>
+                    <button class="btn btn-action" style="background:#388e3c; border-color:#388e3c; margin:0;" onclick="toggleOverlay('bowling')">Bowling Summary</button>
+                    <button class="btn btn-action" style="background:#8e24aa; border-color:#8e24aa; margin:0;" onclick="toggleOverlay('yettobat')">Yet To Bat List</button>
+                </div>
+                <button class="btn btn-action" style="background:#607d8b; border-color:#607d8b; margin-top:5px;" onclick="exportPDF()">📄 Generate PDF Scorecard</button>
+                <button class="btn btn-action" style="background:#424242; margin-top:15px;" onclick="executeOverlay('hide_all')">Hide All Full-Screen Overlays</button>
+                <hr>
+                <label>Match Result</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="input-match-result" placeholder="e.g. TEAM A WON BY 5 WICKETS">
+                    <button class="btn btn-action" style="margin:0; width:auto; background:#d32f2f;" onclick="toggleMatchResult()">Show</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">GAME SETUP, LOGOS & TITLE</h3>
+                <label>Match Title</label><input type="text" id="match-title-input" value="LPL 2026 - FINAL" oninput="updateUI()" style="margin-bottom: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="margin-top:0;">Team 1 Full Name</label><input type="text" id="t1-name" value="TEAM A" style="margin-bottom: 4px;">
+                        <label>Team 1 Short (3-4 Letters)</label><input type="text" id="t1-short" value="TMA" style="margin-bottom: 8px;">
+                        <label>Team 1 Logo</label><input type="file" accept="image/*" onchange="uploadTeamLogo(event, 1)" style="margin-bottom: 8px; font-size:10px;">
+                        <label>Team 1 Roster (.txt)</label><input type="file" accept=".txt" onchange="uploadRoster(event, 1)" style="font-size:10px;">
+                        <div id="t1-roster-status" style="font-size:11px; color:#4caf50; margin-top:4px; font-weight:bold;">Default players loaded.</div>
+                    </div>
+                    <div>
+                        <label style="margin-top:0;">Team 2 Full Name</label><input type="text" id="t2-name" value="TEAM B" style="margin-bottom: 4px;">
+                        <label>Team 2 Short (3-4 Letters)</label><input type="text" id="t2-short" value="TMB" style="margin-bottom: 8px;">
+                        <label>Team 2 Logo</label><input type="file" accept="image/*" onchange="uploadTeamLogo(event, 2)" style="margin-bottom: 8px; font-size:10px;">
+                        <label>Team 2 Roster (.txt)</label><input type="file" accept=".txt" onchange="uploadRoster(event, 2)" style="font-size:10px;">
+                        <div id="t2-roster-status" style="font-size:11px; color:#4caf50; margin-top:4px; font-weight:bold;">Default players loaded.</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 5px; margin-top: 10px;">
+                    <button class="btn btn-action" style="background:#4caf50; border-color:#4caf50;" onclick="saveTeamInfo()">1. Save Team Data</button>
+                    <button class="btn btn-action" onclick="startGame()">2. Start Game</button>
+                    <button class="btn btn-action" style="background:#ff9800; border-color:#ff9800;" onclick="switchInnings()">Switch Inn.</button>
+                </div>
+                <hr>
+                <label>Toss Decision</label>
+                <div style="display: flex; gap: 10px;">
+                    <select id="toss-winner-select" style="flex:1;"><option value="1">Team 1</option><option value="2">Team 2</option></select>
+                    <select id="toss-decision-select" style="flex:1;"><option value="BAT">Elected to Bat</option><option value="BOWL">Elected to Bowl</option></select>
+                </div>
+                <button class="btn btn-action" style="background:#0288d1; border-color:#0288d1; margin-top: 8px;" onclick="setToss()">Set Toss Result</button>
+                <hr>
+                <label>Total Match Overs</label><input type="number" id="in-total-overs" value="20">
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">GENERAL OPTIONS</h3>
+                <div class="switch-row">
+                    <label style="color:#00bcd4"><input type="checkbox" id="tog-title" onchange="updateUI()" checked> Title</label>
+                    <label><input type="checkbox" id="tog-tgt" onchange="updateUI()"> Target</label>
+                    <label><input type="checkbox" id="tog-crr" onchange="updateUI()" checked> CRR</label>
+                    <label><input type="checkbox" id="tog-rrr" onchange="updateUI()"> RRR</label>
+                    <label><input type="checkbox" id="tog-eq" onchange="updateUI()" checked> Win Eq.</label>
+                    <label><input type="checkbox" id="tog-toss" onchange="updateUI()" checked> Toss</label>
+                    <label style="color:#1976d2"><input type="checkbox" id="tog-part" onchange="updateUI()" checked> Part.</label>
+                    <label style="color:#d32f2f"><input type="checkbox" id="tog-fow" onchange="updateUI()" checked> L.FOW</label>
+                    <label style="color:#00e676">
+                        <input type="checkbox" id="tog-ticker" onchange="updTicker()"> Ticker
+                    </label>
+                </div>
+                <hr>
+                <label>Sponsor Logo Upload (Right Edge)</label>
+                <input type="file" id="sponsor-upload" accept="image/*" onchange="uploadSponsor(event)" style="font-size: 11px;">
+                <hr>
+                <div class="style-grid">
+                    <div class="style-item"><input type="color" id="bg1" value="#ffffff" oninput="updStyle()"> Main Board BG 1</div>
+                    <div class="style-item"><input type="color" id="bg2" value="#f0f2f5" oninput="updStyle()"> Main Board BG 2</div>
+                    <div class="style-item"><input type="color" id="sc1" value="#0d1266" oninput="updStyle()"> Accent Dark</div>
+                    <div class="style-item"><input type="color" id="sc2" value="#1a237e" oninput="updStyle()"> Accent Light</div>
+                    <div class="style-item" style="grid-column:span 2;"><input type="color" id="col-ind" value="#00e676" oninput="updStyle()"> Batter Indicator Strip</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">PLAYER GRAPHICS (MILESTONES)</h3>
+                <label>Milestone Alert (50s / 100s)</label>
+                <div style="display:flex; gap:5px;"><select id="milestone-player" style="flex:1;"><option>-- Save Teams First --</option></select>
+                <input type="text" id="milestone-title-input" value="HALF CENTURY" style="flex:1;"></div>
+                <div style="display: flex; gap: 5px; margin-top: 5px;">
+                    <button class="btn btn-action" style="background:#00c853; border-color:#00c853; margin:0;" onclick="triggerMilestone()">Show Milestone</button>
+                    <button class="btn btn-action" style="background:#d32f2f; border-color:#d32f2f; margin:0; width:auto;" onclick="hideMilestone()">Hide</button>
+                </div>
+                <hr>
+                <label>New Batter / Bowler Welcome</label>
+                <div style="display:flex; gap:5px;">
+                    <div style="flex:1;">
+                        <select id="lt-batter"><option>-- Save Teams First --</option></select>
+                        <button class="btn btn-action" style="background:#1976d2; border-color:#1976d2; margin-top:5px;" onclick="triggerLThird('BATTER')">Show New Batter</button>
+                    </div>
+                    <div style="flex:1;">
+                        <select id="lt-bowler"><option>-- Save Teams First --</option></select>
+                        <button class="btn btn-action" style="background:#ff9800; border-color:#ff9800; margin-top:5px;" onclick="triggerLThird('BOWLER')">Show New Bowler</button>
+                    </div>
+                </div>
+                <button class="btn btn-action" style="background:#d32f2f; border-color:#d32f2f; margin-top:5px;" onclick="hideLThird()">Hide Lower Third Graphic</button>
+                <hr>
+                <h3 class="cyan-heading" style="margin-bottom: 5px; font-size:11px;">RESETS (CRASH PROTECTION ON)</h3>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 5px;">
+                    <button class="btn btn-action" style="background:#546e7a; border-color:#546e7a; margin:0;" onclick="clearThisOver()">Clear 'This Over'</button>
+                    <button class="btn btn-action" style="background:#c62828; border-color:#c62828; margin:0;" onclick="resetMatch()">Full Match Reset (Wipe Memory)</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">APP SETTINGS & PRESETS</h3>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                    <button class="btn btn-action" style="background:#1976d2; border-color:#1976d2; margin-top:0;" onclick="exportPreset()">💾 Export Current Preset (.json)</button>
+                    <div>
+                        <label style="margin-top:0;">Load Preset (.json)</label>
+                        <input type="file" accept=".json" onchange="importPreset(event)" style="font-size:11px; padding: 4px;">
+                    </div>
+                </div>
+                <hr>
+                <label>Right Panel Width (%)</label>
+                <input type="range" id="right-col-width" min="20" max="80" step="1" value="42" oninput="updStyle()">
+                
+                <label>Right Panel Size (Zoom Level)</label>
+                <input type="range" id="ctrl-zoom" min="0.5" max="1.5" step="0.05" value="1" oninput="updStyle()">
+                
+                <label>Preview Box Width (%)</label>
+                <input type="range" id="preview-width" min="30" max="100" step="1" value="100" oninput="updStyle()">
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">OVERLAY POSITIONING & SCALING</h3>
+                <div class="style-grid">
+                    <div><label>Main Scoreboard Scale X</label><input type="range" id="scale-x" min="0.5" max="1.5" step="0.05" value="1" oninput="updStyle()"></div>
+                    <div><label>Main Scoreboard Scale Y</label><input type="range" id="scale-y" min="0.5" max="1.5" step="0.05" value="1" oninput="updStyle()"></div>
+                    <div style="grid-column: span 2;"><label>Main Scoreboard Position (Y Off)</label><input type="range" id="y-pos" min="0" max="900" value="650" oninput="updStyle()"></div>
+                </div>
+                <hr>
+                <label>Individual Overlay Scaling</label>
+                <div class="style-grid" style="margin-top: 5px;">
+                    <div><label>FOW Scale</label><input type="range" id="scale-fow" min="0.5" max="1.5" step="0.05" value="0.9" oninput="updStyle()"></div>
+                    <div><label>Batting Scale</label><input type="range" id="scale-bat" min="0.5" max="1.5" step="0.05" value="0.9" oninput="updStyle()"></div>
+                    <div><label>Bowling Scale</label><input type="range" id="scale-bowl" min="0.5" max="1.5" step="0.05" value="0.9" oninput="updStyle()"></div>
+                    <div><label>Yet To Bat Scale</label><input type="range" id="scale-ytb" min="0.5" max="1.5" step="0.05" value="0.9" oninput="updStyle()"></div>
+                    <div><label>Milestone Scale</label><input type="range" id="scale-mile" min="0.5" max="1.5" step="0.05" value="1" oninput="updStyle()"></div>
+                    <div><label>Lower Third Scale</label><input type="range" id="scale-lthird" min="0.5" max="1.5" step="0.05" value="1" oninput="updStyle()"></div>
+                </div>
+                <hr>
+                <label>Individual Overlay Positioning</label>
+                <div class="style-grid" style="margin-top: 5px;">
+                    <div><label>Summary Tables (Y px)</label><input type="range" id="summary-y-pos" min="0" max="1080" value="300" oninput="updStyle()"></div>
+                    <div><label>FOW Graphic (Y px)</label><input type="range" id="fow-y-pos" min="0" max="1080" value="700" oninput="updStyle()"></div>
+                    <div><label>Milestone / L.Thirds (Y px)</label><input type="range" id="milestone-y-pos" min="0" max="1080" value="800" oninput="updStyle()"></div>
+                    <div><label>Yet To Bat Table (Y px)</label><input type="range" id="yettobat-y-pos" min="0" max="1080" value="300" oninput="updStyle()"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">SCROLLING TICKER (NEWS BAR)</h3>
+                <label>Ticker Text</label><input type="text" id="tick-text" value="WELCOME TO THE MATCH" oninput="updTicker()" style="margin-bottom:10px;">
+                <hr>
+                <div class="style-grid">
+                    <div><label>X Position (px)</label><input type="range" id="tick-x" min="0" max="1920" value="0" oninput="updTicker()"></div>
+                    <div><label>Y Position (px)</label><input type="range" id="tick-y" min="0" max="1080" value="1020" oninput="updTicker()"></div>
+                    <div><label>Width (px)</label><input type="range" id="tick-w" min="100" max="1920" value="1920" oninput="updTicker()"></div>
+                    <div><label>Height (px)</label><input type="range" id="tick-h" min="20" max="200" value="60" oninput="updTicker()"></div>
+                    <div><label>Corner Radius (px)</label><input type="range" id="tick-rad" min="0" max="100" value="0" oninput="updTicker()"></div>
+                    <div><label>Speed (s) [Lower=Faster]</label><input type="range" id="tick-speed" min="5" max="60" value="20" oninput="updTicker()"></div>
+                    <div><label>Opacity (%)</label><input type="range" id="tick-opacity" min="10" max="100" value="100" oninput="updTicker()"></div>
+                    <div><label>Text Size</label><input type="range" id="tick-size" min="12" max="60" value="24" oninput="updTicker()"></div>
+                </div>
+                <label>Font Style</label>
+                <select id="tick-font" onchange="updTicker()">
+                    <option value="'Segoe UI', sans-serif">Modern Sans-Serif</option>
+                    <option value="Georgia, serif">Classic Serif</option>
+                    <option value="'Courier New', monospace">Monospace / Typewriter</option>
+                    <option value="Impact, sans-serif">Impact / Heavy</option>
+                </select>
+                <div class="style-grid" style="margin-top: 10px;">
+                    <div class="style-item"><input type="color" id="tick-bg1" value="#1a237e" oninput="updTicker()"> BG Color 1</div>
+                    <div class="style-item"><input type="color" id="tick-bg2" value="#0d1266" oninput="updTicker()"> BG Color 2</div>
+                    <div class="style-item"><input type="color" id="tick-c1" value="#ffffff" oninput="updTicker()"> Text Color 1</div>
+                    <div class="style-item"><input type="color" id="tick-c2" value="#ffffff" oninput="updTicker()"> Text Color 2</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">MANUAL DATA OVERRIDE</h3>
+                <button class="btn btn-action" style="background:#546e7a; border-color:#546e7a; margin-top:0;" onclick="loadManualData()">1. Load Current Scores</button>
+                <div class="style-grid" style="margin-top:15px;">
+                    <div><label>Total Runs</label><input type="number" id="man-runs" value="0"></div>
+                    <div><label>Total Wickets</label><input type="number" id="man-wkts" value="0"></div>
+                    <div><label>Total Balls (e.g. 6 = 1.0 ov)</label><input type="number" id="man-balls" value="0"></div>
+                    <div><label>Total Extras</label><input type="number" id="man-extras" value="0"></div>
+                </div>
+                <hr>
+                <div class="style-grid">
+                    <div><label>Striker Runs</label><input type="number" id="man-p0-runs" value="0"></div>
+                    <div><label>Striker Balls</label><input type="number" id="man-p0-balls" value="0"></div>
+                    <div><label>Non-Striker Runs</label><input type="number" id="man-p1-runs" value="0"></div>
+                    <div><label>Non-Striker Balls</label><input type="number" id="man-p1-balls" value="0"></div>
+                </div>
+                <button class="btn btn-action" style="background:#d32f2f; border-color:#d32f2f; margin-top:15px;" onclick="applyManualData()">2. Force Apply Changes</button>
+            </div>
+
+            <div class="panel">
+                <h3 class="cyan-heading">ADVANCED TEXT CUSTOMIZATION</h3>
+                <label>Backgrounds (Chroma Key)</label>
+                <div class="style-grid" style="margin-top: 5px;">
+                    <div class="style-item"><input type="color" id="chroma-ctrl" value="#050505" oninput="updStyle()"> Controller Window BG</div>
+                    <div class="style-item"><input type="color" id="chroma-obs" value="#00FF00" oninput="updStyle()"> Clean OBS Output BG</div>
+                </div>
+                <hr>
+                <label>Individual Text Sizes</label>
+                <div class="style-grid" style="margin-top: 5px;">
+                    <div><label>Team Names</label><input type="range" id="sz-team" min="10" max="30" value="16" oninput="updStyle()"></div>
+                    <div><label>Total Score</label><input type="range" id="sz-total" min="20" max="60" value="30" oninput="updStyle()"></div>
+                    <div><label>Batter Name</label><input type="range" id="sz-b-name" min="10" max="30" value="16" oninput="updStyle()"></div>
+                    <div><label>Batter Runs</label><input type="range" id="sz-b-runs" min="10" max="40" value="18" oninput="updStyle()"></div>
+                    <div><label>Batter Balls</label><input type="range" id="sz-b-balls" min="8" max="24" value="12" oninput="updStyle()"></div>
+                    <div><label>Stats (CRR/RRR)</label><input type="range" id="sz-stats" min="8" max="24" value="12" oninput="updStyle()"></div>
+                    <div><label>Info Box (Toss)</label><input type="range" id="sz-info" min="8" max="20" value="10" oninput="updStyle()"></div>
+                    <div><label>Bowler Name</label><input type="range" id="sz-bowler" min="10" max="30" value="16" oninput="updStyle()"></div>
+                </div>
+                <hr>
+                <label>Individual Text Colors</label>
+                <div class="style-grid" style="margin-top: 5px;">
+                    <div class="style-item"><input type="color" id="c-team" value="#7f8c8d" oninput="updStyle()"> Team Names</div>
+                    <div class="style-item"><input type="color" id="c-total" value="#ffffff" oninput="updStyle()"> Total Score</div>
+                    <div class="style-item"><input type="color" id="c-b-name" value="#2c3e50" oninput="updStyle()"> Batter Name</div>
+                    <div class="style-item"><input type="color" id="c-b-runs" value="#1a237e" oninput="updStyle()"> Batter Runs</div>
+                    <div class="style-item"><input type="color" id="c-b-balls" value="#7f8c8d" oninput="updStyle()"> Batter Balls</div>
+                    <div class="style-item"><input type="color" id="c-stats" value="#2c3e50" oninput="updStyle()"> Stats</div>
+                    <div class="style-item"><input type="color" id="c-info" value="#2c3e50" oninput="updStyle()"> Info Box</div>
+                    <div class="style-item"><input type="color" id="c-bowler" value="#2c3e50" oninput="updStyle()"> Bowler Name</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="bottom-footer" class="hide-in-obs">
+        BROADCAST PRO | ULTIMATE CRICSCORE © 2026
+    </div>
+
+    <script src="app-protected.js"></script>
+</body>
+</html>
